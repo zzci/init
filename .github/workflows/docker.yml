@@ -2,53 +2,48 @@ name: build-push-docker
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 20 * *'
+
 env:
   IMAGE_NAME: zzci/init
 
 jobs:
   push:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Build docker tag
-        id: tag
         run: |
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
           [ "$VERSION" == "main" ] && VERSION=latest
-          Build="$IMAGE_NAME:$VERSION"
 
-          Date=`date "+%Y%m%d"`
-          Date="$IMAGE_NAME:$Date"
+          echo "tag-date=$IMAGE_NAME:$(date +%Y%m%d)" >> $GITHUB_ENV
+          echo "tag-build=$IMAGE_NAME:$VERSION" >> $GITHUB_ENV
 
-          echo "tag-date=$Date" >> $GITHUB_ENV
-          echo "tag-build=$Build" >> $GITHUB_ENV
-
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PWD }}
 
       - name: Push to Docker Hub
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v7
         with:
+          context: .
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ env.tag-date }}
             ${{ env.tag-build }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

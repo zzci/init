@@ -7,44 +7,43 @@ RUN_DIR=/.init/services/run
 
 RUN="/build/bin/supervisord -c /.init/init.conf"
 
-mkdir -p $RUN_DIR
+mkdir -p "$RUN_DIR"
 
 [ "$JOB" = "help" ] && {
-    echo "Usage: $0 start|stop|disable|enable|restart SERVICE"
-    echo "Usage: $0 show"
+    echo "Usage: $0 start|stop|disable|enable|restart|show SERVICE"
     exit 0
 }
 
 srv_show() {
-    $RUN ctl status $NAME
+    $RUN ctl status "$NAME"
 }
 
 srv_enable() {
-    if [ ! -f $RUN_DIR/$NAME.conf ]; then
-        if [ ! -f $SRV_DIR/$NAME.conf ]; then
-            echo "Can not found $NAME"
-            exit 0
+    if [ ! -f "$RUN_DIR/$NAME.conf" ]; then
+        if [ ! -f "$SRV_DIR/$NAME.conf" ]; then
+            echo "Service not found: $NAME"
+            exit 1
         fi
-        cp -a $SRV_DIR/$NAME.conf $RUN_DIR/$NAME.conf
+        cp -a "$SRV_DIR/$NAME.conf" "$RUN_DIR/$NAME.conf"
     fi
 }
 
 srv_disable() {
-    if [ -f $RUN_DIR/$NAME.conf ]; then
-        rm -rf $RUN_DIR/$NAME.conf
+    if [ -f "$RUN_DIR/$NAME.conf" ]; then
+        rm -f "$RUN_DIR/$NAME.conf"
     fi
 }
 
 srv_start() {
-    if [ ! -f $RUN_DIR/$NAME.conf ]; then
+    if [ ! -f "$RUN_DIR/$NAME.conf" ]; then
         srv_enable
         $RUN ctl reload
     fi
-    $RUN ctl start $NAME
+    $RUN ctl start "$NAME"
 }
 
 srv_stop() {
-    $RUN ctl stop $NAME
+    $RUN ctl stop "$NAME"
 }
 
 srv_restart() {
@@ -52,4 +51,4 @@ srv_restart() {
     srv_start
 }
 
-srv_$JOB
+srv_"$JOB"
