@@ -86,6 +86,23 @@ CMD ["/start.sh"]
 
 `start.sh` / `sctl` use absolute paths internally (`/build/bin/...`, `/.init/...`) and export their own `PATH`, so no extra `ENV` is needed and the layout must be preserved.
 
+If you want `sctl` reachable from an interactive shell (e.g. `docker exec -it <ctr> sctl restart web`), the injected layout's binaries are **not** on the parent image's `PATH`. Either call by absolute path:
+
+```bash
+docker exec -it <ctr> /build/bin/sctl restart web
+```
+
+or extend `PATH` in the derived Dockerfile:
+
+```dockerfile
+FROM alpine:3.20
+COPY --from=zzci/init / /
+ENV PATH=$PATH:/build/bin:/build/bin/busybox
+CMD ["/start.sh"]
+```
+
+Runtime supervision works either way — this only affects interactive use.
+
 ## Adding service definitions
 
 Drop supervisord-format `.conf` files into one of:
