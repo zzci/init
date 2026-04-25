@@ -6,6 +6,7 @@ JOB=${1:-"help"}
 NAME=${2:-""}
 SRV_DIR=/.init/services
 RUN_DIR=/.init/services/run
+DIS_DIR=/.init/services/run/.disabled
 
 RUN="/build/bin/supervisord -c /.init/init.conf"
 
@@ -16,40 +17,32 @@ mkdir -p "$RUN_DIR"
     exit 0
 }
 
+# Tell supervisord to re-read configs and reconcile (start added,
+# stop removed). No-op if supervisord is not running yet.
+ctl_reload() {
+    $RUN ctl reload >/dev/null 2>&1 || true
+}
+
+# List names ending in .conf in a dir, one per line, suffix stripped.
+list_conf_names() {
+    [ -d "$1" ] || return
+    for f in "$1"/*.conf; do
+        [ -f "$f" ] || continue
+        basename "$f" .conf
+    done
+}
+
 srv_list() {
-    a_count=0
-    d_count=0
-    t_count=0
-    a_names=""
-    d_names=""
-    t_names=""
-    if [ -d "$RUN_DIR" ]; then
-        for f in "$RUN_DIR"/*.conf; do
-            [ -f "$f" ] || continue
-            n=$(basename "$f" .conf)
-            a_names="$a_names $n"
-            a_count=$((a_count + 1))
-        done
+    echo "[active]"
+    if status=$($RUN ctl status 2>/dev/null) && [ -n "$status" ]; then
+        echo "$status"
+    else
+        list_conf_names "$RUN_DIR"
     fi
-    if [ -d "$RUN_DIR/.disabled" ]; then
-        for f in "$RUN_DIR/.disabled"/*.conf; do
-            [ -f "$f" ] || continue
-            n=$(basename "$f" .conf)
-            d_names="$d_names $n"
-            d_count=$((d_count + 1))
-        done
-    fi
-    if [ -d "$SRV_DIR" ]; then
-        for f in "$SRV_DIR"/*.conf; do
-            [ -f "$f" ] || continue
-            n=$(basename "$f" .conf)
-            t_names="$t_names $n"
-            t_count=$((t_count + 1))
-        done
-    fi
-    printf "active    (%d):%s\n" "$a_count" "$a_names"
-    printf "disabled  (%d):%s\n" "$d_count" "$d_names"
-    printf "templates (%d):%s\n" "$t_count" "$t_names"
+    echo "[disabled]"
+    list_conf_names "$DIS_DIR"
+    echo "[templates]"
+    list_conf_names "$SRV_DIR"
 }
 
 srv_ls() { srv_list; }
@@ -59,25 +52,29 @@ srv_show() {
 }
 
 srv_enable() {
-    if [ ! -f "$RUN_DIR/$NAME.conf" ]; then
+    if [ -f "$DIS_DIR/$NAME.conf" ]; then
+        mv "$DIS_DIR/$NAME.conf" "$RUN_DIR/$NAME.conf"
+    elif [ ! -f "$RUN_DIR/$NAME.conf" ]; then
         if [ ! -f "$SRV_DIR/$NAME.conf" ]; then
             echo "Service not found: $NAME"
             exit 1
         fi
         cp -a "$SRV_DIR/$NAME.conf" "$RUN_DIR/$NAME.conf"
     fi
+    ctl_reload
 }
 
 srv_disable() {
     if [ -f "$RUN_DIR/$NAME.conf" ]; then
-        rm -f "$RUN_DIR/$NAME.conf"
+        mkdir -p "$DIS_DIR"
+        mv "$RUN_DIR/$NAME.conf" "$DIS_DIR/$NAME.conf"
+        ctl_reload
     fi
 }
 
 srv_start() {
     if [ ! -f "$RUN_DIR/$NAME.conf" ]; then
         srv_enable
-        $RUN ctl reload
     fi
     $RUN ctl start "$NAME"
 }
