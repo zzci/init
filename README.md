@@ -141,8 +141,10 @@ Value semantics:
 | Value | Behavior |
 |-------|----------|
 | empty / `true` / `1` / `yes` / `on` | enable, service name = suffix after `ZSRV_` |
-| `false` / `0` / `no` / `off` | skip |
-| any other string | use value as service name |
+| `false` / `0` / `no` / `off` | disable: move `run/<name>.conf` to `run/.disabled/<name>.conf` |
+| any other string | enable, value used as service name (for names with `-`, `.`) |
+
+Disable preserves the file under `.disabled/` (the `run/` directory may be the only source — e.g. when files are pre-baked there directly), so you can re-enable just by removing the env var. Works for both template-based services and pre-baked ones.
 
 ### 2. `/work/.init/init.sh`
 
