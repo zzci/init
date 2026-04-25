@@ -26,12 +26,15 @@ if [ -d "$WORK/services" ]; then
     cp -a "$WORK/services"/* /.init/services/
 fi
 
-# Toggle services via ZSRV_<key>[=<bool|name>] env vars.
+if [ -f "$WORK/init.sh" ]; then
+    sh "$WORK/init.sh"
+fi
+
+# Toggle services via ZSRV_<key>[=<bool|name>] env vars. Runs after init.sh
+# so deployment-time env vars are the final authority over what init.sh set up.
 # value: true/1/yes/on/empty -> enable using suffix as name
-#        false/0/no/off      -> disable: rename run/<name>.conf to <name>.conf.disable
+#        false/0/no/off      -> disable: move run/<name>.conf to run/.disabled/<name>.conf
 #        other               -> enable using value as service name (for names with -, .)
-# Disable preserves the file (run/ may be the only source); supervisord's
-# include glob *.conf naturally skips .conf.disable.
 for var in $(env | grep '^ZSRV_' | cut -d= -f1); do
     eval "value=\$$var"
     case "$value" in
@@ -61,10 +64,6 @@ for var in $(env | grep '^ZSRV_' | cut -d= -f1); do
         echo "[$DATE] service config not found: $name"
     fi
 done
-
-if [ -f "$WORK/init.sh" ]; then
-    sh "$WORK/init.sh"
-fi
 
 echo "[$DATE] start supervisord"
 exec tini -s -- /build/bin/supervisord -c "$INITCONF"
