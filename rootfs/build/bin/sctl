@@ -1,5 +1,7 @@
 #!/build/bin/busybox/sh
 
+export PATH=/build/bin:/build/bin/busybox:$PATH
+
 JOB=${1:-"help"}
 NAME=${2:-""}
 SRV_DIR=/.init/services
