@@ -12,9 +12,47 @@ RUN="/build/bin/supervisord -c /.init/init.conf"
 mkdir -p "$RUN_DIR"
 
 [ "$JOB" = "help" ] && {
-    echo "Usage: $0 start|stop|disable|enable|restart|show SERVICE"
+    echo "Usage: $0 list|start|stop|disable|enable|restart|show [SERVICE]"
     exit 0
 }
+
+srv_list() {
+    a_count=0
+    d_count=0
+    t_count=0
+    a_names=""
+    d_names=""
+    t_names=""
+    if [ -d "$RUN_DIR" ]; then
+        for f in "$RUN_DIR"/*.conf; do
+            [ -f "$f" ] || continue
+            n=$(basename "$f" .conf)
+            a_names="$a_names $n"
+            a_count=$((a_count + 1))
+        done
+    fi
+    if [ -d "$RUN_DIR/.disabled" ]; then
+        for f in "$RUN_DIR/.disabled"/*.conf; do
+            [ -f "$f" ] || continue
+            n=$(basename "$f" .conf)
+            d_names="$d_names $n"
+            d_count=$((d_count + 1))
+        done
+    fi
+    if [ -d "$SRV_DIR" ]; then
+        for f in "$SRV_DIR"/*.conf; do
+            [ -f "$f" ] || continue
+            n=$(basename "$f" .conf)
+            t_names="$t_names $n"
+            t_count=$((t_count + 1))
+        done
+    fi
+    printf "active    (%d):%s\n" "$a_count" "$a_names"
+    printf "disabled  (%d):%s\n" "$d_count" "$d_names"
+    printf "templates (%d):%s\n" "$t_count" "$t_names"
+}
+
+srv_ls() { srv_list; }
 
 srv_show() {
     $RUN ctl status "$NAME"
