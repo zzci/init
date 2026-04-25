@@ -5,9 +5,6 @@ on:
   schedule:
     - cron: '0 0 20 * *'
 
-env:
-  IMAGE_NAME: zzci/init
-
 jobs:
   push:
     runs-on: ubuntu-latest
@@ -15,14 +12,15 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v6
 
-      - name: Build docker tag
-        run: |
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          [ "$VERSION" == "main" ] && VERSION=latest
-
-          echo "tag-date=$IMAGE_NAME:$(date +%Y%m%d)" >> $GITHUB_ENV
-          echo "tag-build=$IMAGE_NAME:$VERSION" >> $GITHUB_ENV
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: zzci/init
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value={{date 'YYYYMMDD'}}
+            type=semver,pattern={{version}}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -42,8 +40,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            ${{ env.tag-date }}
-            ${{ env.tag-build }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
