@@ -1,16 +1,16 @@
-FROM golang:alpine AS build
+FROM alpine:latest AS build
 
 ARG TINI_VER="v0.19.0"
-ARG SUPERVISORD_COMMIT="16cb640"
+ARG SUPERVISORD_VER="0.1.0"
 ARG TARGETARCH
 
-RUN apk add --no-cache --update git musl-dev gcc build-base busybox-static && \
-    ## mkdir
+RUN apk add --no-cache --update wget tar busybox-static && \
     mkdir -p /build/bin/busybox && \
-    ## supervisord (pinned to latest commit, includes CVE-2024-24786 fix and dependency upgrades)
-    git clone https://github.com/ochinchina/supervisord.git /go/src/supervisord && \
-    cd /go/src/supervisord && git checkout ${SUPERVISORD_COMMIT} && \
-    go build -a -ldflags "-linkmode external -extldflags -static" -o /build/bin/supervisord && \
+    ## supervisord (pre-built from zzci/supervisord)
+    SUP_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x86_64") && \
+    wget -qO- "https://github.com/zzci/supervisord/releases/download/v${SUPERVISORD_VER}/supervisord_${SUPERVISORD_VER}_Linux_${SUP_ARCH}.tar.gz" \
+        | tar -xz -C /tmp supervisord && \
+    mv /tmp/supervisord /build/bin/supervisord && \
     ## tini
     TINI_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") && \
     wget -qO /build/bin/tini "https://github.com/krallin/tini/releases/download/${TINI_VER}/tini-static-${TINI_ARCH}" && \

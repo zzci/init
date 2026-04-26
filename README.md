@@ -7,10 +7,10 @@ Use as a PID 1 init system that runs one or more long-lived processes inside a c
 ## Components
 
 - [tini](https://github.com/krallin/tini) `v0.19.0` — PID 1 signal handling and zombie reaping
-- [ochinchina/supervisord](https://github.com/ochinchina/supervisord) — process supervisor (Go, statically built)
+- [zzci/supervisord](https://github.com/zzci/supervisord) — process supervisor (Go, single static binary, container-focused fork of ochinchina/supervisord)
 - [busybox](https://busybox.net) — coreutils for shell scripts
 
-Final image is built `FROM scratch` — only the three binaries above plus `start.sh` / `sctl`.
+Final image is built `FROM scratch` — only the three binaries above plus `start.sh` / `sctl`. All binaries are pre-built; no compile toolchain at build time.
 
 ## Usage
 
