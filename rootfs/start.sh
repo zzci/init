@@ -1,7 +1,5 @@
 #!/build/bin/busybox/sh
 
-export PATH=/build/bin:/build/bin/busybox:$PATH
-
 WORK=/work/.init
 INITCONF=/.init/init.conf
 DATE=$(date +"%Y-%m-%d %R:%S")
