@@ -14,18 +14,20 @@ trap "stop_ctr $cid" EXIT
 wait_ready "$cid" || { echo "supervisord did not become ready"; exit 1; }
 
 # Capture all logs first; docker stop sends SIGTERM and waits up to 10s.
-# We assert on log evidence (orderly shutdown) rather than exit code,
-# because supervisord's exit code on SIGTERM is implementation-defined
-# and not guaranteed to be 0.
+# An orderly SIGTERM shutdown must exit 0 (supervisord >= 0.2.0): a non-zero
+# code makes every `docker stop` look like a crash to restart policies and
+# orchestrators. tini propagates supervisord's exit code.
 start_time=$(date +%s)
 docker stop -t 10 "$cid" >/dev/null
 elapsed=$(($(date +%s) - start_time))
 
 oom=$(docker inspect -f '{{.State.OOMKilled}}' "$cid" 2>/dev/null || echo "?")
+exit_code=$(docker inspect -f '{{.State.ExitCode}}' "$cid" 2>/dev/null || echo "?")
 logs=$(docker logs "$cid" 2>&1)
 
 fail=0
 assert_eq "not OOM killed" "false" "$oom" || fail=1
+assert_eq "clean SIGTERM shutdown exits 0" "0" "$exit_code" || fail=1
 
 # Shutdown completed before docker's 10s SIGKILL fallback.
 if [ "$elapsed" -lt 10 ]; then

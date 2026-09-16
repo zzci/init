@@ -1,7 +1,7 @@
 FROM alpine:latest AS build
 
 ARG TINI_VER="v0.19.0"
-ARG SUPERVISORD_VER="0.1.0"
+ARG SUPERVISORD_VER="0.2.0"
 ARG TARGETARCH
 
 RUN apk add --no-cache --update wget tar busybox-static && \

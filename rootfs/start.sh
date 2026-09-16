@@ -64,4 +64,7 @@ for var in $(env | grep '^ZSRV_' | cut -d= -f1); do
 done
 
 echo "[$DATE] start supervisord"
-exec tini -s -- /build/bin/supervisord -c "$INITCONF"
+# Absolute path on purpose: PATH is not exported here (so busybox does not
+# shadow the system tools of supervised programs), and an image built with
+# `COPY --from=zzci/init / /` does not inherit this image's ENV PATH either.
+exec /build/bin/tini -s -- /build/bin/supervisord -c "$INITCONF"

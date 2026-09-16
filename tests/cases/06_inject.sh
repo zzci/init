@@ -2,7 +2,8 @@
 # COPY --from=zzci/init / / into a different base image (alpine).
 # - alpine userland is preserved
 # - zzci/init layer (start.sh, sctl, supervisord, tini, busybox) overlays cleanly
-# - PATH is self-exported by start.sh so init system works without ENV PATH
+# - start.sh launches tini/supervisord by absolute path, so it boots without
+#   inheriting zzci/init's ENV PATH
 
 set -uo pipefail
 . "$(dirname "$0")/../lib.sh"
